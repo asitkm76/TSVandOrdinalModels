@@ -12,31 +12,17 @@ lapply(package.list, require, character.only = TRUE)
 # from https://datadryad.org/stash/dataset/doi:10.6078/D1F671
 # and save files to the relevant folder (change file names accordingly)
 
-buildings_dataframe <- read.csv("C:/Users/akumis/OneDrive/databases/ASHRAEDBII/db_metadata.csv")
-indoorEnvironmentData <- read.csv("C:/Users/akumis/OneDrive/databases/ASHRAEDBII/db_measurements/db_measurements_v2.1.0.csv")
+buildings_dataframe <- read.csv("C:/Users/AKumarMishra/OneDrive/databases/ASHRAEDBII/db_metadata.csv")
+indoorEnvironmentData <- read.csv("C:/Users/AKumarMishra/OneDrive/databases/ASHRAEDBII/db_measurements/db_measurements_v2.1.0.csv")
 
 # merge the metadata and ieq data by building id
 mergedIEQData <- merge(buildings_dataframe, indoorEnvironmentData, by = "building_id")
 
 df_rawdata <- mergedIEQData
 
-# combine two outdoor air temperature columns as a new column
-df_rawdata <- df_rawdata %>%
-  mutate(t_out_combined = ifelse(is.na(t_out_isd), t_out, t_out_isd))
-
-# Remove the two outdoor air temperature columns
-df_rawdata <- df_rawdata[, !(names(df_rawdata) %in% c("t_out_isd", "t_out"))]
-
-# Function to keep rows that simultaneously have data for relevant variables in cols
-filter <- function(df, cols) {
-  df_qualified <- df %>%
-    drop_na(cols)
-  return(df_qualified)
-}
-
-# Keep rows that simultaneously have data for relevant variables
-cols_1 <- c('t_out_combined', 'set', 'top', 'thermal_sensation')
-df_data <- filter(df_rawdata, cols_1)
+# Keep complete cases for specified columns
+cols_1 <- c('set', 'top', 'thermal_sensation')
+df_data <- df_rawdata[complete.cases(df_rawdata[cols_1]), ]
 
 # Select the specific building 
 df_data_1bldg <- subset(df_data, df_data$building_id == 735)
@@ -92,11 +78,11 @@ p + geom_segment(aes(x = x_intercept, y = y_axis_min, xend = x_intercept, yend =
   geom_segment(aes(x = x_axis_min, y = 0, xend = x_intercept, yend = 0),
                linetype = "dashed", color = "#228833", size = 1)
 
-### SET ~ TSV model----
+### TSV ~ SET model----
 # generate the model
-lm_model_rev <- lm(set ~ thermal_sensation, data = df_data_1bldg)
+lm_model_TSV <- lm(thermal_sensation ~ set, data = df_data_1bldg)
 # output summary of model
-summary(lm_model_rev)
+summary(lm_model_TSV)
 
 ## an ordinal model for the building----
 # Create the TSV column by binning the thermal sensations
@@ -190,27 +176,3 @@ ggplot(long_df, aes(x = set, y = Probability, color = TSV)) +
         panel.grid.minor = element_line(color = "grey90"))+
   scale_x_continuous(breaks = c(19, 22, 25, 28, 31)) + 
   scale_y_continuous(breaks = c(0.2, 0.4), limits = c(0, 0.45))
-
-
-## 2SLS model to address simultaneity----
-
-# Define the model equations
-eq1 <- set ~ thermal_sensation
-eq2 <- thermal_sensation ~ set
-
-# Combine the equations into a system
-system <- list(eq1 = eq1, eq2 = eq2)
-
-# Define the instrument variables
-instruments <- ~t_out_combined + age + wt
-# instruments <- ~t_out_combined + gender
-# instruments <- ~t_out_combined + rh_out_isd
-# instruments <- ~t_out_combined +  age
-
-# Fit the model using 2SLS
-fit_2sls <- systemfit(system, method = "2SLS", inst = instruments,
-                      data = df_data_1bldg)
-
-
-# Summarize the results
-summary(fit_2sls)
