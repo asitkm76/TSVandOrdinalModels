@@ -12,8 +12,8 @@ lapply(package.list, require, character.only = TRUE)
 # from https://datadryad.org/stash/dataset/doi:10.6078/D1F671
 # and save files to the relevant folder (change file names accordingly)
 
-buildings_dataframe <- read.csv("C:/Users/AKumarMishra/OneDrive/databases/ASHRAEDBII/db_metadata.csv")
-indoorEnvironmentData <- read.csv("C:/Users/AKumarMishra/OneDrive/databases/ASHRAEDBII/db_measurements/db_measurements_v2.1.0.csv")
+buildings_dataframe <- read.csv("YourFolderAddress/db_metadata.csv")
+indoorEnvironmentData <- read.csv("YourFolderAddress/db_measurements/db_measurements_v2.1.0.csv")
 
 # merge the metadata and ieq data by building id
 mergedIEQData <- merge(buildings_dataframe, indoorEnvironmentData, by = "building_id")
